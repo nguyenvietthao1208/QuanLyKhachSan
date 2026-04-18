@@ -1,0 +1,1 @@
+﻿// Designer file trống - UI được build bằng code trong frmProfile.cs
