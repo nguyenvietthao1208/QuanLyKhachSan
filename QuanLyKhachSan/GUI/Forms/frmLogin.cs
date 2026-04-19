@@ -92,7 +92,7 @@ namespace QuanLyKhachSan.GUI
             // Form panel
             pnlForm = new Panel
             {
-                Location  = new Point(40, 180),
+                Location  = new Point(30, 180),
                 Size      = new Size(340, 330),
                 BackColor = BgColor
             };

@@ -182,7 +182,7 @@ namespace QuanLyKhachSan.GUI
         private void InitializeComponent()
         {
             this.Text            = _customer == null ? "Thêm Khách Hàng" : "Sửa Khách Hàng";
-            this.Size            = new Size(400, 380);
+            this.Size            = new Size(430, 430);
             this.StartPosition   = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox     = false;
@@ -201,7 +201,7 @@ namespace QuanLyKhachSan.GUI
             btnSave = new Button
             {
                 Text      = "💾  Lưu",
-                Location  = new Point(20, y + 10),
+                Location  = new Point(70, y + 10),
                 Size      = new Size(160, 38),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = PrimaryColor,
@@ -215,7 +215,7 @@ namespace QuanLyKhachSan.GUI
             btnCancel = new Button
             {
                 Text         = "Hủy",
-                Location     = new Point(190, y + 10),
+                Location     = new Point(240, y + 10),
                 Size         = new Size(100, 38),
                 FlatStyle    = FlatStyle.Flat,
                 BackColor    = Color.FromArgb(108, 117, 125),
@@ -232,9 +232,9 @@ namespace QuanLyKhachSan.GUI
 
         private void AddField(Panel pnl, string label, ref int y, out TextBox txt)
         {
-            pnl.Controls.Add(new Label { Text = label, Location = new Point(0, y), AutoSize = true, Font = new Font("Segoe UI", 9) });
+            pnl.Controls.Add(new Label { Text = label, Location = new Point(35, y), AutoSize = true, Font = new Font("Segoe UI", 9) });
             y += 22;
-            txt = new TextBox { Location = new Point(0, y), Size = new Size(340, 28), Font = new Font("Segoe UI", 9) };
+            txt = new TextBox { Location = new Point(35, y), Size = new Size(340, 28), Font = new Font("Segoe UI", 9) };
             pnl.Controls.Add(txt);
             y += 38;
         }

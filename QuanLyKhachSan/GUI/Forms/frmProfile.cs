@@ -51,7 +51,7 @@ namespace QuanLyKhachSan.GUI
             {
                 Text = "Thông tin cơ bản",
                 Location = new Point(15, 80),
-                Size = new Size(385, 165),
+                Size = new Size(385, 170),
                 Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = PrimaryColor
             };
@@ -117,7 +117,7 @@ namespace QuanLyKhachSan.GUI
 
             // Nút đóng
             btnClose = MakeBtn("✖  Đóng",
-                Color.FromArgb(108, 117, 125), new Point(295, 450), 120);
+                Color.FromArgb(108, 117, 125), new Point(280, 450), 120);
             btnClose.Click += (s, e) => this.Close();
 
             this.Controls.AddRange(new Control[]

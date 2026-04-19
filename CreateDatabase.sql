@@ -112,8 +112,8 @@ CREATE TABLE BookingService (
 -- Tài khoản
 INSERT INTO Account (UserName, DisplayName, PassWord, Role) VALUES
 (N'admin', N'Quản trị viên', N'admin123', N'admin'),
-(N'staff1', N'Nhân viên 1',  N'staff123', N'staff'),
-(N'staff2', N'Nhân viên 2',  N'staff123', N'staff');
+(N'thao1', N'Nhân viên 1',  N'thao1208', N'staff'),
+(N'lanh', N'Nhân viên 2',  N'lananh', N'staff');
 
 -- Loại phòng
 INSERT INTO RoomCategory (Name, Price) VALUES
@@ -159,9 +159,9 @@ INSERT INTO Service (ServiceName, Price) VALUES
 
 -- Khách hàng mẫu
 INSERT INTO Customer (FullName, IdCard, Phone, Address, Email) VALUES
-(N'Nguyễn Văn An',   N'001234567890', N'0901234567', N'Hà Nội',     N'an@email.com'),
-(N'Trần Thị Bình',   N'001234567891', N'0912345678', N'TP.HCM',     N'binh@email.com'),
-(N'Lê Minh Châu',    N'001234567892', N'0923456789', N'Đà Nẵng',    N'chau@email.com');
+(N'Nguyễn Việt Thảo',   N'0312xxxxx34', N'0794105811', N'205, Thượng Lý, Hồng Bàng, Hải Phòng', N'nguyenvietthao1208@gmail.com'),
+(N'Ngô Vy Thương',   N'0312xxxxx01', N'0912345678', N'TP.HCM', N'thuongnv@gmail.com'),
+(N'Nguyễn Văn Tùng',    N'0312xxxxx02', N'0923456789', N'Đà Nẵng', N'tungnv@gmail.com');
 
 PRINT N'Database QuanLyKhachSan tạo thành công!';
 GO

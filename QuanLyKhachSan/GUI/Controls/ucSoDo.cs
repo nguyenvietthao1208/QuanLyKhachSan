@@ -380,6 +380,8 @@ namespace QuanLyKhachSan.GUI
             SetRightPanelEnabled(false);
             lblRoomInfo.Text = "← Chọn phòng để xem thông tin";
             lblCustInfo.Text = "";
+            dgvServices.Rows.Clear();
+            lblTotalValue.Text = "0 VNĐ";
 
             var rooms  = _roomBLL.GetAll();
             var floors = rooms.Select(r => r.Floor).Distinct().OrderBy(f => f).ToList();
