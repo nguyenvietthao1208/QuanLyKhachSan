@@ -3,11 +3,13 @@
 // QuanLyKhachSan.BLL
 // =============================================
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using QuanLyKhachSan.DAL;
 using QuanLyKhachSan.DTO;
+using System;
+using System.Collections.Generic;
+using System.Drawing.Printing;
+using System.Linq;
+using System.Windows.Forms;
 
 namespace QuanLyKhachSan.BLL
 {
@@ -170,15 +172,111 @@ namespace QuanLyKhachSan.BLL
         {
             // Validate
             if (string.IsNullOrWhiteSpace(customer.FullName)) return (false, "Họ tên khách không được để trống!");
-            if (string.IsNullOrWhiteSpace(customer.IdCard))   return (false, "CCCD không được để trống!");
-            if (string.IsNullOrWhiteSpace(customer.Phone))    return (false, "Số điện thoại không được để trống!");
-            if (booking.CheckOut <= booking.CheckIn)          return (false, "Ngày trả phòng phải sau ngày nhận phòng!");
+            if (string.IsNullOrWhiteSpace(customer.IdCard)) return (false, "CCCD không được để trống!");
+            if (string.IsNullOrWhiteSpace(customer.Phone)) return (false, "Số điện thoại không được để trống!");
+            if (booking.CheckOut <= booking.CheckIn) return (false, "Ngày trả phòng phải sau ngày nhận phòng!");
 
             int customerId;
+
             if (isNewCustomer)
             {
-                customerId = _custDal.Insert(customer);
-                if (customerId <= 0) return (false, "Không thể tạo thông tin khách hàng!");
+                // Tìm khách hàng có trùng CCCD, SĐT hoặc Email
+                var allCustomers = _custDal.GetAll();
+                var matchIdCard = allCustomers.Find(c => c.IdCard == customer.IdCard);
+                var matchPhone = allCustomers.Find(c => c.Phone == customer.Phone);
+                var matchEmail = !string.IsNullOrWhiteSpace(customer.Email)
+                                   ? allCustomers.Find(c => !string.IsNullOrWhiteSpace(c.Email)
+                                                          && c.Email == customer.Email)
+                                   : null;
+
+                // Kiểm tra trùng cả 3 (cùng 1 người)
+                bool trungCa3 = matchIdCard != null
+                             && matchPhone != null
+                             && matchEmail != null
+                             && matchIdCard.Id == matchPhone.Id
+                             && matchPhone.Id == matchEmail.Id;
+
+                if (trungCa3)
+                {
+                    return (false, $"Khách hàng đã tồn tại trong hệ thống!\n" +
+                                   $"Tên: {matchIdCard.FullName}\n" +
+                                   $"CCCD: {matchIdCard.IdCard}\n" +
+                                   $"SĐT: {matchIdCard.Phone}");
+                }
+
+                // Kiểm tra trùng 1 hoặc 2 thông tin
+                var trungList = new System.Text.StringBuilder();
+                CustomerDTO existingCustomer = null;
+
+                if (matchIdCard != null)
+                {
+                    existingCustomer = matchIdCard;
+                    trungList.AppendLine($"• CCCD {customer.IdCard} trùng với khách: {matchIdCard.FullName}");
+                }
+                if (matchPhone != null && (existingCustomer == null || matchPhone.Id == existingCustomer.Id))
+                {
+                    existingCustomer = matchPhone;
+                    trungList.AppendLine($"• SĐT {customer.Phone} trùng với khách: {matchPhone.FullName}");
+                }
+                if (matchEmail != null && (existingCustomer == null || matchEmail.Id == existingCustomer.Id))
+                {
+                    existingCustomer = matchEmail;
+                    trungList.AppendLine($"• Email {customer.Email} trùng với khách: {matchEmail.FullName}");
+                }
+
+                if (trungList.Length > 0 && existingCustomer != null)
+                {
+                    // Hiển thị thông báo hỏi có muốn cập nhật không
+                    string msg = $"Phát hiện thông tin trùng:\n{trungList}\n" +
+                                 $"Thông tin cũ:\n" +
+                                 $"  Tên: {existingCustomer.FullName}\n" +
+                                 $"  CCCD: {existingCustomer.IdCard}\n" +
+                                 $"  SĐT: {existingCustomer.Phone}\n" +
+                                 $"  Email: {existingCustomer.Email}\n\n" +
+                                 $"Thông tin mới:\n" +
+                                 $"  Tên: {customer.FullName}\n" +
+                                 $"  CCCD: {customer.IdCard}\n" +
+                                 $"  SĐT: {customer.Phone}\n" +
+                                 $"  Email: {customer.Email}\n\n" +
+                                 $"Bạn có muốn CẬP NHẬT thông tin mới thay thế thông tin cũ không?";
+
+                    var answer = MessageBox.Show(msg, "Phát hiện thông tin trùng",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                    if (answer == DialogResult.Yes)
+                    {
+                        // Cập nhật thông tin mới vào khách hàng cũ
+                        customer.Id = existingCustomer.Id;
+                        _custDal.Update(customer);
+                        customerId = existingCustomer.Id;
+                    }
+                    else
+                    {
+                        // Hỏi thêm: có muốn tiếp tục đặt phòng không
+                        var continueBooking = MessageBox.Show(
+                            "Bạn có muốn tiếp tục đặt phòng với thông tin khách hàng hiện tại không?",
+                            "Xác nhận đặt phòng",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+
+                        if (continueBooking == DialogResult.Yes)
+                        {
+                            // Dùng khách hàng cũ, không cập nhật
+                            customerId = existingCustomer.Id;
+                        }
+                        else
+                        {
+                            // Hủy đặt phòng
+                            return (false, "Đã hủy đặt phòng!");
+                        }
+                    }
+                }
+                else
+                {
+                    // Không trùng gì → thêm mới hoàn toàn
+                    customerId = _custDal.Insert(customer);
+                    if (customerId <= 0) return (false, "Không thể tạo thông tin khách hàng!");
+                }
             }
             else
             {
@@ -196,7 +294,6 @@ namespace QuanLyKhachSan.BLL
             int bookingId = _bookingDal.Insert(booking);
             if (bookingId <= 0) return (false, "Không thể tạo booking!");
 
-            // Cập nhật trạng thái phòng
             _roomDal.UpdateStatus(booking.IdRoom, "Có người");
             return (true, "Đặt phòng thành công!");
         }
@@ -288,6 +385,8 @@ namespace QuanLyKhachSan.BLL
             }
             return ok ? (true, "Chuyển phòng thành công!") : (false, "Chuyển phòng thất bại!");
         }
+        public List<BookingServiceDTO> GetBookingServices(int bookingId)
+    => _bsDal.GetByBookingId(bookingId);
     }
 
     // =============================================

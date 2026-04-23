@@ -2,12 +2,13 @@
 // UC - Khách Hàng (ucKhachHang.cs)
 // =============================================
 
+using QuanLyKhachSan.BLL;
+using QuanLyKhachSan.DTO;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Printing;
 using System.Windows.Forms;
-using QuanLyKhachSan.BLL;
-using QuanLyKhachSan.DTO;
 
 namespace QuanLyKhachSan.GUI
 {
@@ -21,7 +22,7 @@ namespace QuanLyKhachSan.GUI
         private Button       btnSearch, btnAdd, btnEdit, btnDelete, btnRefresh;
         private Label        lblTitle;
         private Panel        pnlTop;
-
+        
         private readonly CustomerBLL _bll = new CustomerBLL();
         private readonly Color PrimaryColor = Color.FromArgb(106, 90, 205);
 
@@ -70,7 +71,7 @@ namespace QuanLyKhachSan.GUI
             btnDelete.Click += BtnDelete_Click;
 
             btnRefresh = MakeBtn("🔄", Color.FromArgb(108, 117, 125), new Point(864, 18), 40);
-            btnRefresh.Click += (s, e) => LoadData();
+            btnRefresh.Click += (s, e) => LoadData();           
 
             pnlTop.Controls.AddRange(new Control[] { lblTitle, txtSearch, btnSearch, btnAdd, btnEdit, btnDelete, btnRefresh });
 
@@ -288,6 +289,7 @@ namespace QuanLyKhachSan.GUI
         private Button       btnRefresh;
         private Label        lblFilter;
         private ComboBox     cmbFilter;
+        private Button       btnPrintBill;
 
         private readonly BookingBLL _bll = new BookingBLL();
         private readonly Color PrimaryColor = Color.FromArgb(106, 90, 205);
@@ -341,7 +343,21 @@ namespace QuanLyKhachSan.GUI
             btnRefresh.FlatAppearance.BorderSize = 0;
             btnRefresh.Click += (s, e) => LoadData();
 
-            pnlTop.Controls.AddRange(new Control[] { lblTitle, lblFilter, cmbFilter, btnRefresh });
+            btnPrintBill = new Button
+            {
+                Text = "🖨 In Bill",
+                Location = new Point(585, 17),
+                Size = new Size(100, 28),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(40, 167, 69),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9),
+                Cursor = Cursors.Hand
+            };
+            btnPrintBill.FlatAppearance.BorderSize = 0;
+            btnPrintBill.Click += BtnPrintBill_Click;
+
+            pnlTop.Controls.AddRange(new Control[] { lblTitle, lblFilter, cmbFilter, btnRefresh, btnPrintBill });
 
             dgv = new DataGridView
             {
@@ -403,10 +419,190 @@ namespace QuanLyKhachSan.GUI
             if (dgv.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
             {
                 e.CellStyle.ForeColor = e.Value.ToString() == "Đang ở"
-                    ? Color.FromArgb(40, 167, 69)
+                    ? Color.FromArgb(220, 53, 69)
                     : Color.FromArgb(108, 117, 125);
                 e.CellStyle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
             }
+        }
+        private void BtnPrintBill_Click(object sender, EventArgs e)
+        {
+            if (dgv.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn hóa đơn cần in!",
+                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            int bookingId = Convert.ToInt32(dgv.SelectedRows[0].Cells["Id"].Value);
+            var allBookings = _bll.GetAll();
+            var booking = allBookings.Find(b => b.Id == bookingId);
+            if (booking == null) return;
+
+            var services = _bll.GetBookingServices(bookingId);
+
+            var pd = new PrintDocument();
+            pd.PrintPage += (s, pe) => DrawBill(pe, booking, services);
+
+            var preview = new PrintPreviewDialog
+            {
+                Document = pd,
+                WindowState = FormWindowState.Maximized,
+                Text = $"Xem trước hóa đơn - Phòng {booking.RoomNumber}"
+            };
+            preview.ShowDialog();
+        }
+
+        private void DrawBill(PrintPageEventArgs e, BookingDTO booking,
+            List<BookingServiceDTO> services)
+        {
+            var g = e.Graphics;
+            var fntTitle = new Font("Arial", 16, FontStyle.Bold);
+            var fntSub = new Font("Arial", 11, FontStyle.Bold);
+            var fntNormal = new Font("Arial", 10);
+            var fntSmall = new Font("Arial", 9);
+            var fntBold = new Font("Arial", 10, FontStyle.Bold);
+            var fntTotal = new Font("Arial", 13, FontStyle.Bold);
+            var brPurple = new SolidBrush(Color.FromArgb(106, 90, 205));
+            var brGray = new SolidBrush(Color.FromArgb(240, 240, 248));
+            var brRed = new SolidBrush(Color.FromArgb(220, 53, 69));
+
+            float pageW = e.PageBounds.Width;
+            float margin = 60;
+            float y = 40;
+
+            // Header
+            g.FillRectangle(brPurple, margin, y, pageW - margin * 2, 55);
+            g.DrawString("QUẢN LÝ KHÁCH SẠN",
+                new Font("Arial", 18, FontStyle.Bold), Brushes.White, margin + 20, y + 10);
+            y += 70;
+
+            // Tiêu đề
+            var titleSize = g.MeasureString("HÓA ĐƠN THANH TOÁN", fntTitle);
+            g.DrawString("HÓA ĐƠN THANH TOÁN", fntTitle, brPurple,
+                (pageW - titleSize.Width) / 2, y);
+            y += titleSize.Height + 5;
+
+            var subStr = $"Mã HĐ: #{booking.Id:D4}    |    Ngày in: {DateTime.Now:dd/MM/yyyy HH:mm}";
+            var subSize = g.MeasureString(subStr, fntSmall);
+            g.DrawString(subStr, fntSmall, Brushes.Gray, (pageW - subSize.Width) / 2, y);
+            y += subSize.Height + 15;
+
+            g.DrawLine(new Pen(Color.FromArgb(106, 90, 205), 2), margin, y, pageW - margin, y);
+            y += 15;
+
+            // Thông tin khách & phòng (2 cột)
+            float col1 = margin, col2 = pageW / 2 + 20;
+            g.DrawString("THÔNG TIN KHÁCH HÀNG", fntSub, brPurple, col1, y);
+            g.DrawString("THÔNG TIN PHÒNG", fntSub, brPurple, col2, y);
+            y += 25;
+
+            float yL = y, yR = y;
+            DrawInfoRow(g, fntBold, fntNormal, col1, ref yL, "Họ tên:", booking.CustomerName);
+            DrawInfoRow(g, fntBold, fntNormal, col1, ref yL, "CCCD:", booking.CustomerIdCard);
+            DrawInfoRow(g, fntBold, fntNormal, col1, ref yL, "SĐT:", booking.CustomerPhone);
+            DrawInfoRow(g, fntBold, fntNormal, col2, ref yR, "Số phòng:", booking.RoomNumber);
+            DrawInfoRow(g, fntBold, fntNormal, col2, ref yR, "Check-in:", booking.CheckIn.ToString("dd/MM/yyyy"));
+            DrawInfoRow(g, fntBold, fntNormal, col2, ref yR, "Check-out:", booking.CheckOut.ToString("dd/MM/yyyy"));
+            DrawInfoRow(g, fntBold, fntNormal, col2, ref yR, "Số đêm:", $"{booking.Nights} đêm");
+
+            y = Math.Max(yL, yR) + 15;
+            g.DrawLine(new Pen(Color.FromArgb(220, 220, 230)), margin, y, pageW - margin, y);
+            y += 15;
+
+            // Bảng chi tiết
+            g.DrawString("CHI TIẾT HÓA ĐƠN", fntSub, brPurple, margin, y);
+            y += 28;
+
+            float[] colX = { margin, margin + 40, margin + 290, margin + 350, margin + 460 };
+            float[] colW = { 40, 250, 60, 110, 110 };
+            string[] headers = { "STT", "Nội dung", "SL", "Đơn giá", "Thành tiền" };
+
+            g.FillRectangle(brPurple, margin, y, pageW - margin * 2, 28);
+            for (int i = 0; i < headers.Length; i++)
+                g.DrawString(headers[i], new Font("Arial", 9, FontStyle.Bold),
+                    Brushes.White, colX[i] + 4, y + 6);
+            y += 28;
+
+            bool alt = false; int stt = 1;
+
+            // Dòng tiền phòng
+            DrawTableRow(g, fntSmall, brGray, colX, colW, ref y, ref alt, ref stt,
+                $"Tiền phòng ({booking.Nights} đêm)",
+                1, booking.RoomAmount / Math.Max(1, booking.Nights), booking.RoomAmount);
+
+            // Dịch vụ
+            foreach (var svc in services)
+                DrawTableRow(g, fntSmall, brGray, colX, colW, ref y, ref alt, ref stt,
+                    svc.ServiceName, svc.Count, svc.UnitPrice, svc.Total);
+
+            g.DrawLine(new Pen(Color.FromArgb(106, 90, 205), 1.5f), margin, y, pageW - margin, y);
+            y += 12;
+
+            // Tổng tiền
+            float totalX = pageW - margin - 220;
+            DrawTotalRow(g, fntNormal, fntBold, totalX, ref y,
+                "Tiền phòng:", booking.RoomAmount.ToString("N0") + " ₫");
+            DrawTotalRow(g, fntNormal, fntBold, totalX, ref y,
+                "Tiền dịch vụ:", booking.ServiceAmount.ToString("N0") + " ₫");
+
+            g.DrawLine(new Pen(Color.FromArgb(106, 90, 205)), totalX, y, pageW - margin, y);
+            y += 8;
+
+            g.FillRectangle(brGray, totalX - 10, y - 4, pageW - margin - totalX + 10, 32);
+            g.DrawString("TỔNG CỘNG:", fntTotal, brPurple, totalX, y);
+            var tsz = g.MeasureString(booking.TotalPrice.ToString("N0") + " ₫", fntTotal);
+            g.DrawString(booking.TotalPrice.ToString("N0") + " ₫", fntTotal, brRed,
+                pageW - margin - tsz.Width, y);
+            y += 45;
+
+            // Trạng thái
+            string stText = booking.Status == "Đã trả" ? "✓  ĐÃ THANH TOÁN" : "⏳  CHƯA THANH TOÁN";
+            var stBrush = booking.Status == "Đã trả"
+                ? new SolidBrush(Color.FromArgb(40, 167, 69))
+                : new SolidBrush(Color.FromArgb(255, 140, 0));
+            var stSize = g.MeasureString(stText, new Font("Arial", 12, FontStyle.Bold));
+            g.DrawString(stText, new Font("Arial", 12, FontStyle.Bold), stBrush,
+                (pageW - stSize.Width) / 2, y);
+            y += 45;
+
+            // Footer
+            g.DrawLine(Pens.LightGray, margin, y, pageW - margin, y);
+            y += 10;
+            var footer = "Cảm ơn quý khách đã sử dụng dịch vụ! Hẹn gặp lại.";
+            var fsz = g.MeasureString(footer, fntSmall);
+            g.DrawString(footer, fntSmall, Brushes.Gray, (pageW - fsz.Width) / 2, y);
+        }
+
+        private void DrawInfoRow(Graphics g, Font fntLabel, Font fntVal,
+            float x, ref float y, string label, string value)
+        {
+            g.DrawString(label, fntLabel, Brushes.Black, x, y);
+            g.DrawString(value, fntVal, Brushes.Black, x + 90, y);
+            y += 22;
+        }
+
+        private void DrawTableRow(Graphics g, Font fnt, Brush brAlt,
+            float[] colX, float[] colW,
+            ref float y, ref bool alt, ref int stt,
+            string name, int qty, decimal unitPrice, decimal total)
+        {
+            if (alt) g.FillRectangle(brAlt, colX[0], y,
+                colX[colX.Length - 1] + colW[colW.Length - 1] - colX[0], 24);
+            g.DrawString(stt.ToString(), fnt, Brushes.Black, colX[0] + 4, y + 3);
+            g.DrawString(name, fnt, Brushes.Black, colX[1] + 4, y + 3);
+            g.DrawString(qty.ToString(), fnt, Brushes.Black, colX[2] + 4, y + 3);
+            g.DrawString(unitPrice.ToString("N0"), fnt, Brushes.Black, colX[3] + 4, y + 3);
+            g.DrawString(total.ToString("N0") + " ₫", fnt, Brushes.Black, colX[4] + 4, y + 3);
+            y += 24; alt = !alt; stt++;
+        }
+
+        private void DrawTotalRow(Graphics g, Font fntLabel, Font fntVal,
+            float x, ref float y, string label, string value)
+        {
+            g.DrawString(label, fntLabel, Brushes.Black, x, y);
+            var vsz = g.MeasureString(value, fntVal);
+            g.DrawString(value, fntVal, Brushes.Black, x + 210 - vsz.Width, y);
+            y += 22;
         }
     }
 }

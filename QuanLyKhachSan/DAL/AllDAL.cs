@@ -261,7 +261,25 @@ namespace QuanLyKhachSan.DAL
 
         public bool Delete(int id)
         {
-            return DBHelper.ExecuteNonQuery("DELETE FROM Customer WHERE Id=@id",
+            // Backup thông tin khách vào Booking trước khi xóa
+            DBHelper.ExecuteNonQuery(@"
+                UPDATE b SET 
+                    b.CustomerNameBackup   = c.FullName,
+                    b.CustomerPhoneBackup  = c.Phone,
+                    b.CustomerIdCardBackup = c.IdCard
+                FROM Booking b
+                INNER JOIN Customer c ON b.IdCustomer = c.Id
+                WHERE b.IdCustomer = @id",
+                new SqlParameter("@id", id));
+
+            // Null hóa IdCustomer
+            DBHelper.ExecuteNonQuery(
+                "UPDATE Booking SET IdCustomer = NULL WHERE IdCustomer = @id",
+                new SqlParameter("@id", id));
+
+            // Xóa khách hàng
+            return DBHelper.ExecuteNonQuery(
+                "DELETE FROM Customer WHERE Id = @id",
                 new SqlParameter("@id", id)) > 0;
         }
 
@@ -311,24 +329,32 @@ namespace QuanLyKhachSan.DAL
 
         public BookingDTO GetActiveByRoomId(int roomId)
         {
-            string sql = @"SELECT b.*, c.FullName AS CustomerName, c.Phone AS CustomerPhone, c.IdCard AS CustomerIdCard,
-                                  r.RoomNumber
-                           FROM Booking b
-                           INNER JOIN Customer c ON b.IdCustomer = c.Id
-                           INNER JOIN Room r ON b.IdRoom = r.Id
-                           WHERE b.IdRoom = @roomId AND b.Status = N'Đang ở'";
+            string sql = @"
+                SELECT b.*,
+                COALESCE(c.FullName, b.CustomerNameBackup,  N'(Đã xóa)') AS CustomerName,
+                COALESCE(c.Phone,    b.CustomerPhoneBackup,  '')           AS CustomerPhone,
+                COALESCE(c.IdCard,   b.CustomerIdCardBackup, '')           AS CustomerIdCard,
+                r.RoomNumber
+                FROM Booking b
+                LEFT JOIN Customer c ON b.IdCustomer = c.Id
+                INNER JOIN Room r    ON b.IdRoom     = r.Id
+                WHERE b.IdRoom = @roomId AND b.Status = N'Đang ở'";
             var dt = DBHelper.ExecuteQuery(sql, new SqlParameter("@roomId", roomId));
             return dt.Rows.Count > 0 ? MapBooking(dt.Rows[0]) : null;
         }
 
         public List<BookingDTO> GetAll()
         {
-            string sql = @"SELECT b.*, c.FullName AS CustomerName, c.Phone AS CustomerPhone, c.IdCard AS CustomerIdCard,
-                                  r.RoomNumber
-                           FROM Booking b
-                           INNER JOIN Customer c ON b.IdCustomer = c.Id
-                           INNER JOIN Room r ON b.IdRoom = r.Id
-                           ORDER BY b.Id DESC";
+            string sql = @"
+                SELECT b.*,
+                COALESCE(c.FullName, b.CustomerNameBackup,  N'(Đã xóa)') AS CustomerName,
+                COALESCE(c.Phone,    b.CustomerPhoneBackup,  '')           AS CustomerPhone,
+                COALESCE(c.IdCard,   b.CustomerIdCardBackup, '')           AS CustomerIdCard,
+                r.RoomNumber
+                FROM Booking b
+                LEFT JOIN Customer c ON b.IdCustomer = c.Id
+                INNER JOIN Room r    ON b.IdRoom     = r.Id
+                ORDER BY b.Id DESC";
             var list = new List<BookingDTO>();
             var dt = DBHelper.ExecuteQuery(sql);
             foreach (DataRow row in dt.Rows)
@@ -365,20 +391,21 @@ namespace QuanLyKhachSan.DAL
 
         private BookingDTO MapBooking(DataRow row) => new BookingDTO
         {
-            Id              = Convert.ToInt32(row["Id"]),
-            CheckIn         = Convert.ToDateTime(row["CheckIn"]),
-            CheckOut        = Convert.ToDateTime(row["CheckOut"]),
-            IdRoom          = Convert.ToInt32(row["IdRoom"]),
-            RoomNumber      = row["RoomNumber"].ToString(),
-            IdCustomer      = Convert.ToInt32(row["IdCustomer"]),
-            CustomerName    = row["CustomerName"].ToString(),
-            CustomerPhone   = row["CustomerPhone"].ToString(),
-            CustomerIdCard  = row["CustomerIdCard"].ToString(),
-            Status          = row["Status"].ToString(),
-            TotalPrice      = Convert.ToDecimal(row["TotalPrice"]),
-            RoomAmount      = Convert.ToDecimal(row["RoomAmount"]),
-            ServiceAmount   = Convert.ToDecimal(row["ServiceAmount"]),
-            Note            = row["Note"] == DBNull.Value ? "" : row["Note"].ToString()
+            Id = Convert.ToInt32(row["Id"]),
+            CheckIn = Convert.ToDateTime(row["CheckIn"]),
+            CheckOut = Convert.ToDateTime(row["CheckOut"]),
+            IdRoom = Convert.ToInt32(row["IdRoom"]),
+            RoomNumber = row["RoomNumber"].ToString(),
+            IdCustomer = row["IdCustomer"] == DBNull.Value
+                     ? 0 : Convert.ToInt32(row["IdCustomer"]),
+            CustomerName = row["CustomerName"].ToString(),
+            CustomerPhone = row["CustomerPhone"].ToString(),
+            CustomerIdCard = row["CustomerIdCard"].ToString(),
+            Status = row["Status"].ToString(),
+            TotalPrice = Convert.ToDecimal(row["TotalPrice"]),
+            RoomAmount = Convert.ToDecimal(row["RoomAmount"]),
+            ServiceAmount = Convert.ToDecimal(row["ServiceAmount"]),
+            Note = row["Note"] == DBNull.Value ? "" : row["Note"].ToString()
         };
     }
 

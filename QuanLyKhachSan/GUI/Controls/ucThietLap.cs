@@ -85,11 +85,12 @@ namespace QuanLyKhachSan.GUI
             // Form nhập
             var grp = new GroupBox
             {
-                Text     = "Thông tin phòng",
-                Location = new Point(10, 10),
-                Size     = new Size(380, 185),
-                Font     = new Font("Segoe UI", 9.5f, FontStyle.Bold),
-                ForeColor = PrimaryColor
+                Text = "Thông tin phòng",
+                Dock = DockStyle.Top,   // ← đẩy lên trên
+                Height = 180,             // ← chỉ cần Height, không cần Size/Location
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Bold),
+                ForeColor = PrimaryColor,
+                Padding = new Padding(5)
             };
 
             int y = 28;
@@ -113,8 +114,8 @@ namespace QuanLyKhachSan.GUI
 
             dgvRoom = BuildDGV();
             dgvRoom.Location = new Point(10, 200);
-            dgvRoom.Size = new Size(700, 300);
-            dgvRoom.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+            dgvRoom.Size = new Size(700, 460);
+            dgvRoom.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;// | AnchorStyles.Bottom;
             dgvRoom.Columns.AddRange(new DataGridViewColumn[]
             {
                 new DataGridViewTextBoxColumn { Name="Id",         HeaderText="ID",            Width=50 },
@@ -125,6 +126,10 @@ namespace QuanLyKhachSan.GUI
                 new DataGridViewTextBoxColumn { Name="Status",     HeaderText="Trạng thái",     Width=100, AutoSizeMode=DataGridViewAutoSizeColumnMode.Fill }
             });
             dgvRoom.SelectionChanged += DgvRoom_SelectionChanged;
+
+           // var pnlGrid = new Panel { Dock = DockStyle.Fill };
+           // dgvRoom.Dock = DockStyle.Fill;
+           // pnlGrid.Controls.Add(dgvRoom);
 
             pnl.Controls.AddRange(new Control[] { grp, dgvRoom });
             tabPhong.Controls.Add(pnl);

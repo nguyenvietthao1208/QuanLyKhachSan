@@ -7,6 +7,9 @@
 //   - iTextSharp (cho PDF): Install-Package iTextSharp
 // =============================================
 
+using ClosedXML.Excel;
+using QuanLyKhachSan.BLL;
+using QuanLyKhachSan.DTO;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -15,8 +18,6 @@ using System.Drawing.Printing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using QuanLyKhachSan.BLL;
-using QuanLyKhachSan.DTO;
 
 namespace QuanLyKhachSan.GUI
 {
@@ -286,8 +287,8 @@ namespace QuanLyKhachSan.GUI
             {
                 // Dùng EPPlus nếu đã cài NuGet EPPlus
                 // Nếu chưa cài, tạo file CSV thay thế
-                ExportToCSV(dlg.FileName.Replace(".xlsx", ".csv"));
-                MessageBox.Show($"Xuất file thành công!\n{dlg.FileName.Replace(".xlsx", ".csv")}",
+                ExportToExcel(dlg.FileName.Replace(".xlsx", ".xlsx"));
+                MessageBox.Show($"Xuất file thành công!\n{dlg.FileName.Replace(".xlsx", ".xlsx")}",
                     "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
@@ -296,29 +297,92 @@ namespace QuanLyKhachSan.GUI
             }
         }
 
-        private void ExportToCSV(string filePath)
+        private void ExportToExcel(string filePath)
         {
-            using (var sw = new StreamWriter(filePath, false, System.Text.Encoding.UTF8))
-            {
-                // Header
-                sw.WriteLine("BÁO CÁO QUẢN LÝ KHÁCH SẠN");
-                sw.WriteLine($"Từ: {dtpFrom.Value:dd/MM/yyyy} - Đến: {dtpTo.Value:dd/MM/yyyy}");
-                sw.WriteLine($"Xuất lúc: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
-                sw.WriteLine();
-                sw.WriteLine("Mã HĐ,Phòng,Khách hàng,SĐT,Check-in,Check-out,Số đêm,Tiền phòng,Tiền DV,Tổng tiền,Trạng thái");
+            var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("BaoCao");
 
-                foreach (DataGridViewRow row in dgvOverall.Rows)
+            // ===== HEADER =====
+            ws.Range("A1:K1").Merge().Value = "BÁO CÁO QUẢN LÝ KHÁCH SẠN";
+            ws.Range("A1:K1").Style.Font.Bold = true;
+            ws.Range("A1:K1").Style.Font.FontSize = 16;
+            ws.Range("A1:K1").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            ws.Range("A2:K2").Merge().Value = $"Từ: {dtpFrom.Value:dd/MM/yyyy} - Đến: {dtpTo.Value:dd/MM/yyyy}";
+            ws.Range("A3:K3").Merge().Value = $"Xuất lúc: {DateTime.Now:dd/MM/yyyy HH:mm:ss}";
+
+            // ===== HEADER TABLE =====
+            string[] headers = {
+        "Mã HĐ","Phòng","Khách hàng","SĐT",
+        "Check-in","Check-out","Số đêm",
+        "Tiền phòng","Tiền DV","Tổng tiền","Trạng thái"
+    };
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var cell = ws.Cell(5, i + 1);
+                cell.Value = headers[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Fill.BackgroundColor = XLColor.LightGray;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+
+            // ===== DATA =====
+            int rowIndex = 6;
+
+            foreach (DataGridViewRow row in dgvOverall.Rows)
+            {
+                if (row.IsNewRow) continue;
+
+                for (int i = 0; i < 11; i++)
                 {
-                    var cells = new string[11];
-                    for (int i = 0; i < 11; i++)
-                        cells[i] = row.Cells[i].Value?.ToString() ?? "";
-                    sw.WriteLine(string.Join(",", cells));
+                    var val = row.Cells[i].Value;
+
+                    if (val == null)
+                        ws.Cell(rowIndex, i + 1).Value = "";
+                    else
+                        ws.Cell(rowIndex, i + 1).Value = val.ToString();
                 }
 
-                sw.WriteLine();
-                sw.WriteLine($"Tổng lượt thuê,{lblSumRooms.Text}");
-                sw.WriteLine($"Doanh thu,{lblSumRevenue.Text}");
+                // Tô màu trạng thái
+                var statusCell = ws.Cell(rowIndex, 11);
+                if (statusCell.Value.ToString().Contains("Đã trả"))
+                    statusCell.Style.Font.FontColor = XLColor.Green;
+                else
+                    statusCell.Style.Font.FontColor = XLColor.Orange;
+
+                rowIndex++;
             }
+
+            // ===== FORMAT =====
+            // Tiền căn phải
+            ws.Column(8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+            ws.Column(9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+            ws.Column(10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+            ws.Column(8).Style.NumberFormat.Format = "#,##0 \"đ\"";
+            ws.Column(9).Style.NumberFormat.Format = "#,##0 \"đ\"";
+            ws.Column(10).Style.NumberFormat.Format = "#,##0 \"đ\"";
+
+            // SĐT dạng text
+            ws.Column(4).Style.NumberFormat.Format = "@";
+
+            // ===== BORDER =====
+            var tableRange = ws.Range(5, 1, rowIndex - 1, 11);
+            tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            // ===== FOOTER =====
+            ws.Cell(rowIndex + 1, 10).Value = lblSumRooms.Text;
+
+            ws.Cell(rowIndex + 2, 10).Value = lblSumRevenue.Text;
+
+            ws.Range(rowIndex + 1, 10, rowIndex + 2, 10).Style.Font.Bold = true;
+
+            // ===== AUTO WIDTH =====
+            ws.Columns().AdjustToContents();
+
+            wb.SaveAs(filePath);
         }
 
         // ── EXPORT PDF ────────────────────────────────────────

@@ -48,7 +48,7 @@ namespace QuanLyKhachSan.GUI
         private void InitializeComponent()
         {
             this.Text            = $"Đặt phòng {_room.RoomNumber}";
-            this.Size            = new Size(540, 620);
+            this.Size            = new Size(540, 650);
             this.StartPosition   = FormStartPosition.CenterParent;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox     = false;
@@ -88,7 +88,7 @@ namespace QuanLyKhachSan.GUI
             {
                 Text     = "Thông Tin Khách Hàng",
                 Location = new Point(15, 85),
-                Size     = new Size(500, 250),
+                Size     = new Size(500, 270),
                 Font     = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = PrimaryColor
             };
@@ -131,8 +131,8 @@ namespace QuanLyKhachSan.GUI
             grpBooking = new GroupBox
             {
                 Text      = "Thông Tin Đặt Phòng",
-                Location  = new Point(15, 348),
-                Size      = new Size(500, 180),
+                Location  = new Point(15, 370),
+                Size      = new Size(500, 150),
                 Font      = new Font("Segoe UI", 9.5f, FontStyle.Bold),
                 ForeColor = PrimaryColor
             };

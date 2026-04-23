@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Security.AccessControl;
 using System.Windows.Forms;
 using QuanLyKhachSan.BLL;
 using QuanLyKhachSan.DTO;
@@ -19,10 +20,13 @@ namespace QuanLyKhachSan.GUI
         private Panel      pnlLeft;        // Sơ đồ phòng (phân tầng)
         private Panel      pnlRight;       // Panel dịch vụ
         private SplitContainer split;
+        public bool IsLoaded { get; private set; } = false;
+
 
         // Toolbar trên
         private Panel      pnlToolbar;
         private Label      lblTitle;
+        private Label      lblTitle1;
         private Button     btnRefresh;
         private Label      lblLegend1;
         private Label      lblLegend2;
@@ -93,6 +97,15 @@ namespace QuanLyKhachSan.GUI
                 Location  = new Point(15, 13)
             };
 
+            lblTitle1 = new Label
+            {
+                Text      = "Trạng thái:",
+                Font      = new Font("Segoe UI", 14, FontStyle.Bold),
+                ForeColor = PrimaryColor,
+                AutoSize  = true,
+                Location  = new Point(430, 13)
+            };
+
             btnRefresh = new Button
             {
                 Text      = "🔄 Làm mới",
@@ -108,10 +121,10 @@ namespace QuanLyKhachSan.GUI
             btnRefresh.Click += (s, e) => LoadData();
 
             // Legend
-            lblLegend1 = MakeLegend("  Trống  ", ColorEmpty, new Point(430, 16));
-            lblLegend2 = MakeLegend("  Có người  ", ColorOccupied, new Point(520, 16));
+            lblLegend1 = MakeLegend("  Trống  ", ColorEmpty, new Point(540, 16));
+            lblLegend2 = MakeLegend("  Có người  ", ColorOccupied, new Point(640, 16));
 
-            pnlToolbar.Controls.AddRange(new Control[] { lblTitle, btnRefresh, lblLegend1, lblLegend2 });
+            pnlToolbar.Controls.AddRange(new Control[] { lblTitle, lblTitle1, btnRefresh, lblLegend1, lblLegend2 });
 
             // ── SPLIT CONTAINER ───────────────────────────────
             split = new SplitContainer
@@ -145,6 +158,9 @@ namespace QuanLyKhachSan.GUI
                 split.Panel2MinSize = 350;
                 if (split.Width > 760)
                     split.SplitterDistance = split.Width - 420;
+
+                IsLoaded = true;
+                LoadData();
             };
         }
 
@@ -613,7 +629,7 @@ namespace QuanLyKhachSan.GUI
                 $"Xác nhận thanh toán phòng {_selectedRoom.RoomNumber}?\n\n" +
                 $"Tiền phòng:  {roomTotal:N0} ₫\n" +
                 $"Tiền dịch vụ: {svcTotal:N0} ₫\n" +
-                $"─────────────────\n" +
+                $"──────────────────────\n" +
                 $"TỔNG CỘNG: {grand:N0} ₫",
                 "Xác nhận thanh toán",
                 MessageBoxButtons.YesNo,

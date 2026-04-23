@@ -273,7 +273,7 @@ namespace QuanLyKhachSan.GUI
             if (uc == null) return;
 
             // Refresh nếu cần
-            if (uc is ucSoDo s) s.LoadData();
+            if (uc is ucSoDo s && s.IsLoaded) s.LoadData();
             if (uc is ucKhachHang kh) kh.LoadData();
             if (uc is ucHoaDon hd) hd.LoadData();
             if (uc is ucBaoCao bc) bc.LoadAll(); // ← THÊM DÒNG NÀY
@@ -289,25 +289,19 @@ namespace QuanLyKhachSan.GUI
             pnlContent.Controls.Add(uc);
         }
 
+        // Thêm property vào frmMain
+        public bool IsLogout { get; private set; } = false;
+
+        // Sửa MnuLogout_Click
         private void MnuLogout_Click(object sender, EventArgs e)
         {
             var result = MessageBox.Show("Bạn có chắc muốn đăng xuất?", "Xác nhận",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (result == DialogResult.Yes)
-            {
-                this.Hide();
-                var login = new frmLogin();
-                if (login.ShowDialog() == DialogResult.OK)
-                {
-                    CurrentAccount = login.LoggedInAccount;
-                    // Restart với account mới
-                    Application.Restart();
-                }
-                else
-                {
-                    Application.Exit();
-                }
-            }
+
+            if (result != DialogResult.Yes) return;
+
+            IsLogout = true;  // ← đánh dấu là đăng xuất
+            this.Close();     // ← đóng form chính, quay về vòng lặp trong Program.cs
         }
     }
 }

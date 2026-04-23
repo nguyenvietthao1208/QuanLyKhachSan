@@ -34,11 +34,17 @@ namespace QuanLyKhachSan
             }
 
             // Hiển thị form đăng nhập
-            var loginForm = new frmLogin();
-            if (loginForm.ShowDialog() == DialogResult.OK)
+            while (true)  // ← vòng lặp cho phép đăng xuất/đăng nhập lại
             {
-                var mainForm = new frmMain(loginForm.LoggedInAccount);
-                Application.Run(mainForm);
+                var login = new frmLogin();
+                if (login.ShowDialog() != DialogResult.OK)
+                    break; // Đóng login → thoát app
+
+                var main = new frmMain(login.LoggedInAccount);
+                Application.Run(main);
+
+                // Nếu main đóng mà không phải do đăng xuất → thoát app
+                if (!main.IsLogout) break;
             }
         }
     }
