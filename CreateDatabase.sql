@@ -165,3 +165,10 @@ INSERT INTO Customer (FullName, IdCard, Phone, Address, Email) VALUES
 
 PRINT N'Database QuanLyKhachSan tạo thành công!';
 GO
+
+----------------------------------------------------------------------
+ALTER TABLE Booking ALTER COLUMN IdCustomer INT NULL;
+
+ALTER TABLE Booking ADD CustomerNameBackup  NVARCHAR(100) NULL;
+ALTER TABLE Booking ADD CustomerPhoneBackup NVARCHAR(20)  NULL;
+ALTER TABLE Booking ADD CustomerIdCardBackup NVARCHAR(20) NULL;
